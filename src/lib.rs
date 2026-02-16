@@ -515,9 +515,13 @@ fn test_random_32_bytes() -> [u8; 32] {
 
     let mut ret = [0; 32];
     for i in 0..8 {
-        let rng = RNG.load(Ordering::Relaxed).wrapping_mul(PRIME_1).wrapping_add(PRIME_2);
+        let prev = RNG
+            .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |rng| {
+                Some(rng.wrapping_mul(PRIME_1).wrapping_add(PRIME_2))
+            })
+            .unwrap();
+        let rng = prev.wrapping_mul(PRIME_1).wrapping_add(PRIME_2);
         ret[i * 4..(i + 1) * 4].copy_from_slice(&rng.to_be_bytes());
-        RNG.store(rng, Ordering::Relaxed);
     }
     ret
 }
